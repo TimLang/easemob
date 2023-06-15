@@ -38,6 +38,10 @@ module Easemob
     def set_user_nickname(username, nickname:)
       UserMessage.new request :put, "users/#{username}", json: { nickname: nickname }
     end
+    
+    def set_meta_user_nickname(username, nickname:)
+      UserMessage.new request :put, "metadata/user/#{username}", json: { nickname: nickname }
+    end
 
     def add_user_friend(owner_username, friend_username:)
       UserMessage.new request :post, "users/#{owner_username}/contacts/users/#{friend_username}"
