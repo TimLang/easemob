@@ -57,6 +57,28 @@ module Easemob
       res
     end
   end
+  
+  def self.request_with_form(verb, resource, options = {})
+    httprbs.with do |http|
+      res = do_request_with_form(verb, http, resource, options)
+      case res.code
+      # 401:（未授权）请求要求身份验证。对于需要 token 的接口，服务器可能返回此响应。
+      when 401
+        Token.refresh
+        res = do_request(verb, http, resource, options)
+      # 408:（请求超时）服务器等候请求时发生超时。
+      when 408
+        res = do_request(verb, http, resource, options)
+      # 503:（服务不可用）请求接口超过调用频率限制，即接口被限流。
+      when 429, 503
+        sleep 1
+        res = do_request(verb, http, resource, options)
+        raise QuotaLimitError, 'Return http status code is 429/503, hit quota limit of Easemob service,' if [429, 503].include?(res.code)
+      end
+      res
+    end
+  end
+
 
   # Get admin access token from easemob server
   # @return access_token [String]
@@ -102,6 +124,28 @@ module Easemob
     end
   end
 
+  def self.do_request_with_form(verb, http, resource, options)
+    http = http.headers('Authorization' => "Bearer #{token}", "Content-Type" => 'application/x-www-form-urlencoded')
+
+    case verb
+    when :upload
+      restrict_access = options.delete(:restrict_access) || true
+      http.headers('restrict-access' => restrict_access)
+        .request(:post, "#{head_url}/#{resource}", options)
+    when :download
+      header = { 'Accept' => 'application/octet-stream' }
+      share_secret = options.delete(:share_secret)
+      header['share-secret'] = share_secret unless share_secret.nil?
+      thumbnail = options.delete(:thumbnail)
+      header['thumbnail'] = thumbnail if thumbnail
+      http.headers(header)
+        .request(:get, "#{head_url}/#{resource}")
+    else
+      http.request(verb, "#{head_url}/#{resource}", {body: URI.encode_www_form(options[:json])})
+    end
+  end
+
+ 
   def self.httprbs
     @httprbs ||= ConnectionPool.new(size: @http_pool, timeout: @http_timeout) { HTTP.persistent @base_url }
   end
