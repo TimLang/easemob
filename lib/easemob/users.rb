@@ -1,10 +1,6 @@
 module Easemob
   autoload(:UserMessage, File.expand_path('message/user_message', __dir__))
   module Users
-
-    def get_user_offline_msg_count(username)
-      UserMessage.new request :get, "users/#{username}/offline_msg_count"
-    end
     
     def create_user(username, password, nickname: nil)
       valid_username!(username)
