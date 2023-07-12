@@ -44,6 +44,10 @@ module Easemob
       UserMessage.new request_with_form :put, "metadata/user/#{username}", json: { nickname: nickname }
     end
 
+    def set_meta_user_nickname_and_ext(username, nickname, ext)
+      UserMessage.new request_with_form :put, "metadata/user/#{username}", json: { nickname: nickname, ext: ext }
+    end
+
     def add_user_friend(owner_username, friend_username:)
       UserMessage.new request :post, "users/#{owner_username}/contacts/users/#{friend_username}"
     end
